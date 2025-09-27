@@ -31,7 +31,7 @@ async function initializeMCP() {
     const transport = new StdioClientTransport({
       command: "/Users/uniqual/.nvm/versions/node/v22.18.0/bin/node",
       args: [
-        "/Users/uniqual/Sites/Desktop/sendra/mcp-send-email/build/index.js",
+        "/Users/uniqual/Sites/Desktop/sendra-mcp/mcp-send-email/build/index.js",
       ],
       env: {
         RESEND_API_KEY: process.env.RESEND_API_KEY,
