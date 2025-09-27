@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/AbhiVarde/abhivarde.in)
 
-## Getting Started
+# 🚀 Sendra MCP - Appwrite Deployment Monitor with Resend MCP
 
-First, run the development server:
+Never miss a failed deployment again! Sendra monitors your Appwrite deployments and sends instant email alerts when something goes wrong.
 
+<img width="1200" height="630" alt="og-image" src="./public/og-image.png" />
+
+## 🏆 Hackathon Submission
+**Built for:** [Resend MCP Hackathon](https://resend.com/blog/resend-mcp-hackathon) - showcasing MCP integration in a real-world deployment monitoring scenario.
+
+## 🎯 Problem Solved
+Appwrite doesn't send email notifications for failed deployments like Vercel does. This MCP version of Sendra demonstrates how to solve this using the Model Context Protocol for email notifications.
+
+## 🔄 MCP vs Production Version
+- **Production Sendra**: Uses Appwrite Functions + Direct Resend API → [Live Demo](https://sendra.vercel.app)
+- **Sendra MCP**: Uses Local Node.js Server + Resend MCP Protocol → This Repository
+
+## ✨ Key Features
+- 🔐 **Secure GitHub Authentication** - Login with your GitHub account
+- 📊 **Real-time Dashboard** - View your latest deployment status at a glance
+- 🤖 **Resend MCP Integration** - Email notifications via MCP protocol
+- 📧 **Smart Email Alerts** - Only sends emails for NEW failed deployments (no spam!)
+- 🔒 **Encrypted API Keys** - Your Appwrite credentials are safely encrypted
+- ⚡ **Local Development** - Perfect for testing MCP integrations
+
+## 🛠️ Tech Stack
+- **Frontend**: Next.js, Material UI, TypeScript (Port 3000)
+- **Local MCP Server**: Node.js with Resend MCP (Port 3001)
+- **Database**: Appwrite Database
+- **Authentication**: GitHub OAuth
+- **Email Service**: Resend MCP Protocol
+- **Security**: Base64 encryption for API keys
+
+## 🚀 How It Works (MCP Version)
+1. **Login** with GitHub
+2. **Add** your Appwrite Project ID, API Key, and email
+3. **Dual Server Setup** - Frontend (3000) + MCP Server (3001)
+4. **MCP Monitoring** - Local server checks deployments every 5 minutes via MCP
+5. **Get Alerted** - Receive email notifications through Resend MCP for NEW failures only
+
+## 📦 Installation & Setup
+
+### Prerequisites
+- Node.js 18+
+- Appwrite account
+- Resend account for MCP integration
+
+### Local Development (Dual Terminal Setup)
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone the repository
+git clone https://github.com/AbhiVarde/sendra
+cd sendra-mcp
+
+# Install frontend dependencies
+npm install
+
+# Install MCP server dependencies
+cd local-server
+npm install
+cd ..
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
+```env
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=
+NEXT_PUBLIC_APPWRITE_ENDPOINT=
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=
+NEXT_PUBLIC_APPWRITE_COLLECTION_ID=
+NEXT_PUBLIC_FETCH_DEPLOYMENTS_FUNCTION_ID=
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Running the Application
+```bash
+# Terminal 1: Start Frontend Server
+npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Terminal 2: Start MCP Server
+cd local-server
+npm start
+```
 
-## Learn More
+## 🏗️ MCP Architecture
+```
+Frontend (3000) ↔ Local MCP Server (3001) ↔ Resend MCP ↔ Email Delivery
+                              ↕
+                        Appwrite Database
+```
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🎯 Hackathon Innovation
+- **Real-world MCP Usage**: Demonstrates MCP in actual deployment monitoring
+- **Practical Problem**: Fills the gap of missing Appwrite deployment notifications
+- **Dual Architecture**: Shows both traditional API and MCP approaches
+- **Local Testing**: Perfect environment for MCP development and testing
 
-## Deploy on Vercel
+## 🚧 Development Notes
+- Designed specifically for local development and MCP testing
+- Requires dual terminal setup (Frontend + MCP Server)
+- Not deployed - purely for hackathon demonstration
+- Production version available at [sendra.vercel.app](https://sendra.vercel.app)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🤝 Contributing
+This is a hackathon submission showcasing MCP integration. For production contributions, check the main [Sendra repository](https://github.com/AbhiVarde/sendra).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+Sendra is licensed under the [MIT License](http://choosealicense.com/licenses/mit/). All rights reserved.
+
+## Authors
+
+Sendra is created and maintained by [Abhi Varde](https://www.abhivarde.in/) for the Resend MCP Hackathon.
+
+---
+⭐ **Interested in MCP integration? Give it a star!**
