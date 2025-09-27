@@ -87,9 +87,6 @@ Frontend (3000) ↔ Local MCP Server (3001) ↔ Resend MCP ↔ Email Delivery
                         Appwrite Database
 ```
 
-
-```
-
 ## 🎯 Hackathon Innovation
 - **Real-world MCP Usage**: Demonstrates MCP in actual deployment monitoring
 - **Practical Problem**: Fills the gap of missing Appwrite deployment notifications
