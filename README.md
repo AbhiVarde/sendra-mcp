@@ -100,7 +100,8 @@ Frontend (3000) ↔ Local MCP Server (3001) ↔ Resend MCP ↔ Email Delivery
 - Production version available at [sendra.vercel.app](https://sendra.vercel.app)
 
 ## 🤝 Contributing
-This is a hackathon submission showcasing MCP integration. For production contributions, check the main [Sendra repository](https://github.com/AbhiVarde/sendra).
+This is a hackathon submission showcasing MCP integration. 
+For production contributions, check the main [Sendra repository](https://github.com/AbhiVarde/sendra).
 
 ## License
 
