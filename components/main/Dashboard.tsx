@@ -82,6 +82,15 @@ const Dashboard: React.FC<DashboardProps> = ({ darkMode, user }) => {
 
   const hasReachedLimit = projects.length >= MAX_PROJECTS;
 
+  useEffect(() => {
+    if (!user) {
+      setProjects([]);
+      setProjectDeployments({});
+      setDeploymentLoading({});
+      setInitialLoading(false);
+    }
+  }, [user]);
+
   // Encode API key
   const encodeApiKey = useCallback((apiKey: string): string => {
     return btoa(apiKey);
@@ -114,54 +123,37 @@ const Dashboard: React.FC<DashboardProps> = ({ darkMode, user }) => {
       setDeploymentLoading((prev) => ({ ...prev, [documentId]: true }));
 
       try {
-        // Call local server instead of Appwrite function
-        const response = await fetch(
-          "http://localhost:3001/api/fetch-deployments",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ projectId, apiKey: encodedApiKey }),
-          }
+        const result = await functions.createExecution(
+          process.env.NEXT_PUBLIC_FETCH_DEPLOYMENTS_FUNCTION_ID!,
+          JSON.stringify({ projectId, apiKey: encodedApiKey }),
+          false
         );
 
-        const data = await response.json();
+        const response: DeploymentResponse = JSON.parse(result.responseBody);
 
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch deployments");
-        }
-
-        const deploymentResponse: DeploymentResponse = data;
-
-        if (deploymentResponse.success) {
+        if (response.success) {
           setProjectDeployments((prev) => ({
             ...prev,
-            [documentId]: deploymentResponse,
+            [documentId]: response,
           }));
 
           const currentProject = projects.find((p) => p.$id === documentId);
-          if (
-            currentProject &&
-            currentProject.deployments !== deploymentResponse.total
-          ) {
+          if (currentProject && currentProject.deployments !== response.total) {
             await databases.updateDocument(
               process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
               process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_ID!,
               documentId,
-              { deployments: deploymentResponse.total }
+              { deployments: response.total }
             );
 
             setProjects((prev) =>
               prev.map((p) =>
-                p.$id === documentId
-                  ? { ...p, deployments: deploymentResponse.total }
-                  : p
+                p.$id === documentId ? { ...p, deployments: response.total } : p
               )
             );
           }
         } else {
-          throw new Error(
-            deploymentResponse.error || "Failed to fetch deployments"
-          );
+          throw new Error(response.error || "Failed to fetch deployments");
         }
       } catch (error: any) {
         console.error(`Failed to fetch deployments:`, error);
