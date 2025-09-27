@@ -127,6 +127,7 @@ app.post("/api/fetch-deployments", async (req, res) => {
       });
     }
 
+    console.log(`Fetching deployments for project: ${projectId}`);
     const decodedApiKey = decodeApiKey(apiKey);
     const userClient = new Client();
     userClient
@@ -140,7 +141,15 @@ app.post("/api/fetch-deployments", async (req, res) => {
 
     for (const site of sitesResponse.sites || []) {
       try {
+        console.log(
+          `Fetching deployments for site: ${site.$id} (${site.name})`
+        );
         const deploymentsResponse = await sites.listDeployments(site.$id);
+        console.log(
+          `Found ${
+            deploymentsResponse.deployments?.length || 0
+          } deployments for site ${site.$id}`
+        );
         const recentDeployments = (deploymentsResponse.deployments || [])
           .sort((a, b) => new Date(b.$createdAt) - new Date(a.$createdAt))
           .slice(0, 5);
@@ -159,6 +168,7 @@ app.post("/api/fetch-deployments", async (req, res) => {
           totalSize: deployment.totalSize || 0,
           buildDuration: deployment.buildDuration || 0,
         }));
+
         allDeployments.push(...siteDeployments);
       } catch (depError) {
         console.log(
@@ -172,12 +182,14 @@ app.post("/api/fetch-deployments", async (req, res) => {
       (a, b) => new Date(b.$createdAt) - new Date(a.$createdAt)
     );
 
+    console.log(`Total deployments found: ${allDeployments.length}`);
     const failedDeployments = allDeployments.filter(
       (d) => d.status === "failed"
     );
 
     let emailsSent = 0;
     if (failedDeployments.length > 0) {
+      console.log(`🚨 Found ${failedDeployments.length} failed deployments!`);
       try {
         const userDoc = await databases.listDocuments(
           process.env.APPWRITE_DATABASE_ID,
@@ -186,9 +198,13 @@ app.post("/api/fetch-deployments", async (req, res) => {
         );
 
         const userEmail = userDoc.documents[0]?.email;
+        console.log(`User email found: ${userEmail ? "Yes" : "No"}`);
         if (userEmail && mcpClient) {
           for (const deployment of failedDeployments) {
             try {
+              console.log(
+                `📧 Sending email for failed deployment: ${deployment.resourceId}`
+              );
               const emailData = generateFailureEmail(
                 deployment,
                 projectId,
@@ -196,14 +212,24 @@ app.post("/api/fetch-deployments", async (req, res) => {
               );
               await sendEmailViaMCP(emailData);
               emailsSent++;
+              console.log(
+                `✅ Email sent via MCP for deployment ${deployment.resourceId}`
+              );
             } catch (emailError) {
-              console.error("Email error:", emailError);
+              console.error(`❌ Failed to send email via MCP:`, emailError);
             }
           }
+        } else {
+          console.log("⚠️ MCP client not available or no user email found");
+          console.log(
+            `MCP client status: ${mcpClient ? "Connected" : "Not connected"}`
+          );
         }
       } catch (dbError) {
-        console.error("Failed to fetch user email:", dbError);
+        console.error("Failed to fetch user email from database:", dbError);
       }
+    } else {
+      console.log("✅ No failed deployments found");
     }
 
     return res.json({
@@ -268,7 +294,10 @@ app.post("/api/test-email", async (req, res) => {
       `,
     };
     await sendEmailViaMCP(emailData);
-    return res.json({ success: true, message: "Test email sent successfully" });
+    return res.json({
+      success: true,
+      message: "Test email sent successfully",
+    });
   } catch (error) {
     console.error("Test email error:", error);
     return res.status(500).json({
