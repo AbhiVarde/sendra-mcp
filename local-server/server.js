@@ -6,10 +6,11 @@ const { Client, Databases, Query, Sites } = require("node-appwrite");
 const app = express();
 const PORT = 3001;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Appwrite Client
+// Initialize Appwrite Client
 const client = new Client();
 client
   .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -18,7 +19,7 @@ client
 
 const databases = new Databases(client);
 
-// MCP Client
+// MCP Client Setup
 async function initializeMCP() {
   try {
     const {
@@ -46,6 +47,7 @@ async function initializeMCP() {
 
     await mcpClient.connect(transport);
     console.log("Connected to Resend MCP server");
+
     return mcpClient;
   } catch (error) {
     console.error("Failed to initialize MCP client:", error);
@@ -54,26 +56,31 @@ async function initializeMCP() {
 }
 
 let mcpClient = null;
+
+// Initialize MCP on startup
 initializeMCP().then((client) => {
   mcpClient = client;
 });
 
+// Function to send email via MCP
 async function sendEmailViaMCP(emailData) {
   if (!mcpClient) {
     console.log("MCP client not initialized, skipping email");
     return;
   }
+
   try {
     const result = await mcpClient.callTool({
       name: "send-email",
       arguments: {
         to: emailData.to,
         subject: emailData.subject,
-        text: emailData.text || emailData.html.replace(/<[^>]+>/g, ""),
+        text: emailData.text || emailData.html.replace(/<[^>]+>/g, ""), // plain text fallback
         html: emailData.html,
         from: process.env.SENDER_EMAIL_ADDRESS,
       },
     });
+
     console.log("Email sent via MCP:", result);
     return result;
   } catch (error) {
@@ -82,10 +89,12 @@ async function sendEmailViaMCP(emailData) {
   }
 }
 
+// Function to decode API key
 function decodeApiKey(encodedApiKey) {
   return Buffer.from(encodedApiKey, "base64").toString();
 }
 
+// Generate email content for failed deployment
 function generateFailureEmail(deployment, projectId, userEmail) {
   return {
     to: userEmail,
@@ -93,22 +102,37 @@ function generateFailureEmail(deployment, projectId, userEmail) {
     html: `
 <!DOCTYPE html>
 <html>
-  <body style="font-family: Arial; background-color: #fff; color: #111; margin: 0; padding: 24px;">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Failed</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #fff; color: #111; margin: 0; padding: 24px;">
     <div style="max-width: 600px; margin: auto;">
-      <p>Hi there,</p>
-      <p>There was an error deploying <strong>${
-        deployment.siteName
-      }</strong> to production on <strong>${projectId}</strong>.</p>
-      <ul>
+      <p style="font-size: 15px; line-height: 1.5; margin: 0 0 16px 0;">
+        Hi there,
+      </p>
+      <p style="font-size: 15px; line-height: 1.5; margin: 0 0 16px 0;">
+        There was an error deploying <strong>${
+          deployment.siteName
+        }</strong> to the production environment 
+        on <strong>${projectId}</strong>.
+      </p>
+      <p style="font-size: 15px; line-height: 1.5; margin: 0 0 8px 0;">
+        <strong>Deployment Details:</strong>
+      </p>
+      <ul style="font-size: 14px; line-height: 1.5; margin: 0 0 16px 0;">
         <li>Deployment ID: ${deployment.resourceId}</li>
         <li>Status: ${deployment.status}</li>
         <li>Build Duration: ${deployment.buildDuration}s</li>
         <li>Created: ${new Date(deployment.$createdAt).toLocaleString()}</li>
       </ul>
-      <p>Please check your deployment logs and try again.</p>
-      <hr>
-      <p style="font-size: 12px; color: #666; text-align: center;">
-        Automated notification from Sendra (Local Demo with MCP).
+      <p style="font-size: 15px; line-height: 1.5; margin: 0 0 24px 0;">
+        Please check your deployment logs and try deploying again.
+      </p>
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+      <p style="font-size: 12px; color: #666; margin: 0; text-align: center;">
+        This is an automated notification from Sendra deployment monitoring system (Local Demo with MCP).
       </p>
     </div>
   </body>
@@ -116,10 +140,11 @@ function generateFailureEmail(deployment, projectId, userEmail) {
   };
 }
 
-// Fetch deployments
+// Route to fetch deployments
 app.post("/api/fetch-deployments", async (req, res) => {
   try {
     const { projectId, apiKey } = req.body;
+
     if (!projectId || !apiKey) {
       return res.status(400).json({
         success: false,
@@ -128,7 +153,11 @@ app.post("/api/fetch-deployments", async (req, res) => {
     }
 
     console.log(`Fetching deployments for project: ${projectId}`);
+
+    // Decode API key
     const decodedApiKey = decodeApiKey(apiKey);
+
+    // Initialize Appwrite Client with user's credentials
     const userClient = new Client();
     userClient
       .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -136,6 +165,8 @@ app.post("/api/fetch-deployments", async (req, res) => {
       .setKey(decodedApiKey);
 
     const sites = new Sites(userClient);
+
+    // Get sites and deployments
     const sitesResponse = await sites.list();
     let allDeployments = [];
 
@@ -144,15 +175,17 @@ app.post("/api/fetch-deployments", async (req, res) => {
         console.log(
           `Fetching deployments for site: ${site.$id} (${site.name})`
         );
+
         const deploymentsResponse = await sites.listDeployments(site.$id);
         console.log(
           `Found ${
             deploymentsResponse.deployments?.length || 0
           } deployments for site ${site.$id}`
         );
+
         const recentDeployments = (deploymentsResponse.deployments || [])
           .sort((a, b) => new Date(b.$createdAt) - new Date(a.$createdAt))
-          .slice(0, 5);
+          .slice(0, 5); // only last 5 deployments
 
         const siteDeployments = recentDeployments.map((deployment) => ({
           siteId: site.$id,
@@ -178,18 +211,23 @@ app.post("/api/fetch-deployments", async (req, res) => {
       }
     }
 
+    // Sort newest first
     allDeployments.sort(
       (a, b) => new Date(b.$createdAt) - new Date(a.$createdAt)
     );
-
     console.log(`Total deployments found: ${allDeployments.length}`);
+
+    // Check for failed deployments and send emails via MCP
     const failedDeployments = allDeployments.filter(
       (d) => d.status === "failed"
     );
 
     let emailsSent = 0;
+
     if (failedDeployments.length > 0) {
       console.log(`🚨 Found ${failedDeployments.length} failed deployments!`);
+
+      // Get user email from database
       try {
         const userDoc = await databases.listDocuments(
           process.env.APPWRITE_DATABASE_ID,
@@ -199,6 +237,7 @@ app.post("/api/fetch-deployments", async (req, res) => {
 
         const userEmail = userDoc.documents[0]?.email;
         console.log(`User email found: ${userEmail ? "Yes" : "No"}`);
+
         if (userEmail && mcpClient) {
           for (const deployment of failedDeployments) {
             try {
@@ -243,6 +282,7 @@ app.post("/api/fetch-deployments", async (req, res) => {
     });
   } catch (error) {
     console.error("Local server error:", error);
+
     if (error.code === 401) {
       return res.status(401).json({
         success: false,
@@ -250,12 +290,14 @@ app.post("/api/fetch-deployments", async (req, res) => {
           "Invalid API key or insufficient permissions. Make sure your API key has 'sites.read' scope.",
       });
     }
+
     if (error.code === 404) {
       return res.status(404).json({
         success: false,
         error: "Project not found or no sites available.",
       });
     }
+
     return res.status(500).json({
       success: false,
       error: `Failed to fetch site deployments: ${error.message}`,
@@ -263,37 +305,42 @@ app.post("/api/fetch-deployments", async (req, res) => {
   }
 });
 
-// Test email
+// Route to manually test email sending
 app.post("/api/test-email", async (req, res) => {
   try {
     const { to, subject, message } = req.body;
+
     if (!to || !subject || !message) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields: to, subject, message",
       });
     }
+
     if (!mcpClient) {
       return res.status(500).json({
         success: false,
         error: "MCP client not initialized",
       });
     }
+
     const emailData = {
-      to,
-      subject,
+      to: to,
+      subject: subject,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Test Email from Sendra</h2>
           <p>${message}</p>
           <hr>
           <p style="font-size: 12px; color: #666;">
-            Test email sent via Resend MCP from Sendra local server.
+            This is a test email sent via Resend MCP from Sendra local development server.
           </p>
         </div>
       `,
     };
+
     await sendEmailViaMCP(emailData);
+
     return res.json({
       success: true,
       message: "Test email sent successfully",
@@ -322,22 +369,25 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Root
+// Root endpoint
 app.get("/", (req, res) => {
   res.json({
     message: "Sendra Local MCP Server",
     version: "1.0.0",
     endpoints: [
-      "GET /health",
-      "POST /api/fetch-deployments",
-      "POST /api/test-email",
+      "GET /health - Health check",
+      "POST /api/fetch-deployments - Fetch and monitor deployments",
+      "POST /api/test-email - Send test email via MCP",
     ],
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Local Sendra server running on http://localhost:${PORT}`);
+  console.log(
+    `🚀 Local Sendra server with MCP running on http://localhost:${PORT}`
+  );
   console.log(
     `📧 MCP Email integration: ${mcpClient ? "Ready" : "Initializing..."}`
   );
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
