@@ -94,8 +94,15 @@ function decodeApiKey(encodedApiKey) {
   return Buffer.from(encodedApiKey, "base64").toString();
 }
 
+function buildConsoleUrl(projectId, siteId, region) {
+  const regionCode = region || "fra";
+  return `https://cloud.appwrite.io/console/project-${regionCode}-${projectId}/sites/site-${siteId}`;
+}
+
 // Generate email content for failed deployment
-function generateFailureEmail(deployment, projectId, userEmail) {
+function generateFailureEmail(deployment, projectId, userEmail, region) {
+  const consoleUrl = buildConsoleUrl(projectId, deployment.siteId, region);
+
   return {
     to: userEmail,
     subject: `Failed production deployment on project '${deployment.siteName}'`,
@@ -109,30 +116,31 @@ function generateFailureEmail(deployment, projectId, userEmail) {
   </head>
   <body style="font-family: Arial, sans-serif; background-color: #fff; color: #111; margin: 0; padding: 24px;">
     <div style="max-width: 600px; margin: auto;">
+
       <p style="font-size: 15px; line-height: 1.5; margin: 0 0 16px 0;">
         Hi there,
       </p>
+
       <p style="font-size: 15px; line-height: 1.5; margin: 0 0 16px 0;">
-        There was an error deploying <strong>${
-          deployment.siteName
-        }</strong> to the production environment 
-        on <strong>${projectId}</strong>.
+        There was an error deploying <strong>${deployment.siteName}</strong> to the production environment 
+        on <strong>your project</strong>.
       </p>
-      <p style="font-size: 15px; line-height: 1.5; margin: 0 0 8px 0;">
-        <strong>Deployment Details:</strong>
+
+     <p style="font-size: 15px; line-height: 1.5; margin: 0 0 8px 0;">
+        <a href="${consoleUrl}" 
+           style="color: #2563eb; text-decoration: none;">See deployment details</a>
       </p>
-      <ul style="font-size: 14px; line-height: 1.5; margin: 0 0 16px 0;">
-        <li>Deployment ID: ${deployment.resourceId}</li>
-        <li>Status: ${deployment.status}</li>
-        <li>Build Duration: ${deployment.buildDuration}s</li>
-        <li>Created: ${new Date(deployment.$createdAt).toLocaleString()}</li>
-      </ul>
+
       <p style="font-size: 15px; line-height: 1.5; margin: 0 0 24px 0;">
-        Please check your deployment logs and try deploying again.
+        You can also <a href="${consoleUrl}" 
+        style="color: #2563eb; text-decoration: none;">view latest deployments</a> for branch 
+        <strong>main</strong>.
       </p>
+
       <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+
       <p style="font-size: 12px; color: #666; margin: 0; text-align: center;">
-        This is an automated notification from Sendra deployment monitoring system (Local Demo with MCP).
+        This is an automated notification from Sendra deployment monitoring system.
       </p>
     </div>
   </body>
@@ -236,6 +244,7 @@ app.post("/api/fetch-deployments", async (req, res) => {
         );
 
         const userEmail = userDoc.documents[0]?.email;
+        const userRegion = userDoc.documents[0]?.region || "fra";
         console.log(`User email found: ${userEmail ? "Yes" : "No"}`);
 
         if (userEmail && mcpClient) {
@@ -247,7 +256,8 @@ app.post("/api/fetch-deployments", async (req, res) => {
               const emailData = generateFailureEmail(
                 deployment,
                 projectId,
-                userEmail
+                userEmail,
+                userRegion
               );
               await sendEmailViaMCP(emailData);
               emailsSent++;
